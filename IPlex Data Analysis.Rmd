@@ -1,0 +1,449 @@
+---
+title: "IPlex Data Analysis"
+author: "Taylor Kelly"
+date: "2/4/2022"
+output: html_document
+---
+
+```{r packages and files, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#rm(list=ls())
+library(dplyr)
+library("ggfortify")
+library(ggplot2)
+library(dplyr)
+library(devtools)
+#library(pca3d)
+
+#Files 
+SNPs <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Edited_All_individuals_11_5_2021_forR_edit.csv")
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r PCA Sheet binding}
+#Bind together new datasets 
+Lee1 = read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/SNP Data for California Aedes aegypti/Genotype CSVs/1_Lee_F1-W1-1.csv")
+Lee2 = read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/SNP Data for California Aedes aegypti/Genotype CSVs/1_Lee_F1-W2-1.csv")
+LeeAll <- left_join(Lee1, Lee2, by = "SAMPLE_NAME")
+
+AttardoW1 = read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/SNP Data for California Aedes aegypti/Genotype CSVs/Attardo_CV_2-W1-2.csv")
+AttardoW2 = read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/SNP Data for California Aedes aegypti/Genotype CSVs/Attardo_CV_2-W2-1.csv")
+Attardo891 = read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/SNP Data for California Aedes aegypti/Genotype CSVs/Attardo_CV_2-8-9-W1-2.csv")
+Attardo892 = read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/SNP Data for California Aedes aegypti/Genotype CSVs/Attardo_CV_2-8-9-W2.csv")
+Attardo89 <-left_join(Attardo891, Attardo892, by = "SAMPLE_NAME")
+Attardomost <-left_join(AttardoW1, AttardoW2, by = "SAMPLE_NAME")
+Attardoall <- bind_rows(Attardo89, Attardomost)
+
+LeeAll = LeeAll %>%
+  mutate(across(everything(), as.character))
+Attardoall = Attardoall %>%
+  mutate(across(everything(), as.character))
+combinedSNPs <- bind_rows(Attardoall, LeeAll)
+write.csv(combinedSNPs,file= "CombinedLEEAttardoAug2021SNPs.csv")
+
+t18w1 <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Kelly_12Dec2018-W1.csv")
+t18w2 <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Kelly_12Dec2018-W2.csv")
+t18rs <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Kelly_12Dec2018-W1-RS.csv")
+wes <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Attardo_WES-W1.csv")
+cv2 <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Attardo_CV_2-W2.csv")
+DSY1 <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Attardo_DSY-W1.csv")
+DSY2 <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Attardo_DSY-W2.csv")
+WSrs <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Attardo_DSY-W2-rs.csv")
+single <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Attardo_DSY-singlesys.csv")
+
+#prep all datasheets from Madera 
+#problems- Ts are read as True or False 
+Madera1 <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Madera-W1.csv")
+Madera2 <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Madera-W2.csv")
+Madera2b <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Madera-W2-RESPOTS.csv")
+
+Madera1 = Madera1 %>%
+  mutate(across(everything(), as.character))
+Madera2 = Madera2 %>%
+  mutate(across(everything(), as.character))
+Madera2b = Madera2b %>%
+  mutate(across(everything(), as.character))
+#to deal with this stupid problem 
+Madera2bind <- bind_rows(Madera2, Madera2b)
+MaderaAll <-left_join(Madera2bind, Madera1, by = "SAMPLE_NAME")
+
+#prep all datasheets from 2022
+OC1 <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Plate_1-OCP#1-W1-RESPOT.csv")
+OC2 <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Plate_1-OCP#1-W2.csv")
+OCG1 <- 
+
+OCPt1 <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Plate_2-OC_R_Sy_P#2-W1.csv")
+OCPt2 <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/Plate_2-OC_R_Sy_P#2-W2.csv")
+
+Janupdate <- read.csv("/Volumes/GoogleDrive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Working_All_Nov21_individuals.csv")
+
+Janupdate = Janupdate %>%
+  mutate(across(everything(), as.character))
+janupdatebind <- bind_rows(Janupdate, MaderaAll)
+
+write.csv(janupdatebind,file= "All_individuals_28Jan22.csv")
+
+```
+
+
+
+```{r PCA Data Sheet recoding}
+#Excel created 
+
+
+combinedSNPs[combinedSNPs == "TRUE"] <- "T"
+combinedSNPs["X1000854266"][combinedSNPs["X1000854266"] == "T"] <- "1"
+combinedSNPs["X1055614166"][combinedSNPs["X1055614166"] == "T"] <- "1"
+combinedSNPs["X1179585685"][combinedSNPs["X1179585685"] == "G"] <- "1"
+combinedSNPs["X1224849446"][combinedSNPs["X1224849446"] == "G"] <- "1"
+combinedSNPs["X2038960557"][combinedSNPs["X2038960557"] == "A"] <- "1"
+combinedSNPs["X2107208294"][combinedSNPs["X2107208294"] == "T"] <- "1"
+combinedSNPs["X2377059147"][combinedSNPs["X2377059147"] == "A"] <- "1"
+combinedSNPs["X3052344181"][combinedSNPs["X3052344181"] == "T"] <- "1"
+combinedSNPs["X3315939224"][combinedSNPs["X3315939224"] == "A"] <- "1"
+combinedSNPs["vgsc_3315931548"][combinedSNPs["vgsc_3315931548"] == "C"] <- "1"
+combinedSNPs["vgsc_3315931672"][combinedSNPs["vgsc_3315931672"] == "T"] <- "1"
+combinedSNPs["vgsc_3315983763"][combinedSNPs["vgsc_3315983763"] == "C"] <- "1"
+combinedSNPs["vgsc_3315999297"][combinedSNPs["vgsc_3315999297"] == "G"] <- "1"
+combinedSNPs["vgsc_3316014588"][combinedSNPs["vgsc_3316014588"] == "A"] <- "1"
+combinedSNPs["vgsc_3316080722"][combinedSNPs["vgsc_3316080722"] == "C"] <- "1"
+combinedSNPs["X1000854391"][combinedSNPs["X1000854391"] == "G"] <- "1"
+combinedSNPs["X1016293828"][combinedSNPs["X1016293828"] == "T"] <- "1"
+combinedSNPs["X1027746708"][combinedSNPs["X1027746708"] == "C"] <- "1"
+combinedSNPs["X1070561909"][combinedSNPs["X1070561909"] == "A"] <- "1"
+combinedSNPs["X1101943648"][combinedSNPs["X1101943648"] == "G"] <- "1"
+combinedSNPs["X2001844389"][combinedSNPs["X2001844389"] == "T"] <- "1"
+combinedSNPs["X2186624519"][combinedSNPs["X2186624519"] == "G"] <- "1"
+combinedSNPs["X2400630292"][combinedSNPs["X2400630292"] == "A"] <- "1"
+combinedSNPs["X2426833801"][combinedSNPs["X2426833801"] == "A"] <- "1"
+combinedSNPs["X2429563021"][combinedSNPs["X2429563021"] == "G"] <- "1"
+combinedSNPs["X2472373785"][combinedSNPs["X2472373785"] == "C"] <- "1"
+combinedSNPs["X3000389496"][combinedSNPs["X3000389496"] == "T"] <- "1"
+combinedSNPs["X3019326496"][combinedSNPs["X3019326496"] == "T"] <- "1"
+combinedSNPs["X3068430261"][combinedSNPs["X3068430261"] == "G"] <- "1"
+combinedSNPs["X3233038191"][combinedSNPs["X3233038191"] == "G"] <- "1"
+combinedSNPs["X3233420299"][combinedSNPs["X3233420299"] == "A"] <- "1"
+combinedSNPs["X3235265896"][combinedSNPs["X3235265896"] == "G"] <- "1"
+combinedSNPs["X3305442338"][combinedSNPs["X3305442338"] == "A"] <- "1"
+combinedSNPs["X3385240055"][combinedSNPs["X3385240055"] == "A"] <- "1"
+combinedSNPs["vgsc_3315983611"][combinedSNPs["vgsc_3315983611"] == "C"] <- "1"
+combinedSNPs["X1000854266"][combinedSNPs["X1000854266"] == "C"] <- "3"
+combinedSNPs["X1055614166"][combinedSNPs["X1055614166"] == "C"] <- "3"
+combinedSNPs["X1179585685"][combinedSNPs["X1179585685"] == "A"] <- "3"
+combinedSNPs["X1224849446"][combinedSNPs["X1224849446"] == "A"] <- "3"
+combinedSNPs["X2038960557"][combinedSNPs["X2038960557"] == "G"] <- "3"
+combinedSNPs["X2107208294"][combinedSNPs["X2107208294"] == "G"] <- "3"
+combinedSNPs["X2377059147"][combinedSNPs["X2377059147"] == "C"] <- "3"
+combinedSNPs["X3052344181"][combinedSNPs["X3052344181"] == "C"] <- "3"
+combinedSNPs["X3315939224"][combinedSNPs["X3315939224"] == "C"] <- "3"
+combinedSNPs["vgsc_3315931548"][combinedSNPs["vgsc_3315931548"] == "A"] <- "3"
+combinedSNPs["vgsc_3315931672"][combinedSNPs["vgsc_3315931672"] == "C"] <- "3"
+combinedSNPs["vgsc_3315983763"][combinedSNPs["vgsc_3315983763"] == "T"] <- "3"
+combinedSNPs["vgsc_3315999297"][combinedSNPs["vgsc_3315999297"] == "T"] <- "3"
+combinedSNPs["vgsc_3316014588"][combinedSNPs["vgsc_3316014588"] == "T"] <- "3"
+combinedSNPs["vgsc_3316080722"][combinedSNPs["vgsc_3316080722"] == "A"] <- "3"
+combinedSNPs["X1000854391"][combinedSNPs["X1000854391"] == "C"] <- "3"
+combinedSNPs["X1016293828"][combinedSNPs["X1016293828"] == "C"] <- "3"
+combinedSNPs["X1027746708"][combinedSNPs["X1027746708"] == "T"] <- "3"
+combinedSNPs["X1070561909"][combinedSNPs["X1070561909"] == "G"] <- "3"
+combinedSNPs["X1101943648"][combinedSNPs["X1101943648"] == "T"] <- "3"
+combinedSNPs["X2001844389"][combinedSNPs["X2001844389"] == "G"] <- "3"
+combinedSNPs["X2186624519"][combinedSNPs["X2186624519"] == "A"] <- "3"
+combinedSNPs["X2400630292"][combinedSNPs["X2400630292"] == "T"] <- "3"
+combinedSNPs["X2426833801"][combinedSNPs["X2426833801"] == "G"] <- "3"
+combinedSNPs["X2429563021"][combinedSNPs["X2429563021"] == "A"] <- "3"
+combinedSNPs["X2472373785"][combinedSNPs["X2472373785"] == "T"] <- "3"
+combinedSNPs["X3000389496"][combinedSNPs["X3000389496"] == "A"] <- "3"
+combinedSNPs["X3019326496"][combinedSNPs["X3019326496"] == "C"] <- "3"
+combinedSNPs["X3068430261"][combinedSNPs["X3068430261"] == "A"] <- "3"
+combinedSNPs["X3233038191"][combinedSNPs["X3233038191"] == "A"] <- "3"
+combinedSNPs["X3233420299"][combinedSNPs["X3233420299"] == "T"] <- "3"
+combinedSNPs["X3235265896"][combinedSNPs["X3235265896"] == "A"] <- "3"
+combinedSNPs["X3305442338"][combinedSNPs["X3305442338"] == "G"] <- "3"
+combinedSNPs["X3385240055"][combinedSNPs["X3385240055"] == "G"] <- "3"
+combinedSNPs["vgsc_3315983611"][combinedSNPs["vgsc_3315983611"] == "T"] <- "3"
+combinedSNPs["X1000854266"][combinedSNPs["X1000854266"] == "TC"] <- "2"
+combinedSNPs["X1055614166"][combinedSNPs["X1055614166"] == "TC"] <- "2"
+combinedSNPs["X1179585685"][combinedSNPs["X1179585685"] == "GA"] <- "2"
+combinedSNPs["X1224849446"][combinedSNPs["X1224849446"] == "GA"] <- "2"
+combinedSNPs["X2038960557"][combinedSNPs["X2038960557"] == "AG"] <- "2"
+combinedSNPs["X2107208294"][combinedSNPs["X2107208294"] == "TG"] <- "2"
+combinedSNPs["X2377059147"][combinedSNPs["X2377059147"] == "AC"] <- "2"
+combinedSNPs["X3052344181"][combinedSNPs["X3052344181"] == "TC"] <- "2"
+combinedSNPs["X3315939224"][combinedSNPs["X3315939224"] == "AC"] <- "2"
+combinedSNPs["vgsc_3315931548"][combinedSNPs["vgsc_3315931548"] == "CA"] <- "2"
+combinedSNPs["vgsc_3315931672"][combinedSNPs["vgsc_3315931672"] == "TC"] <- "2"
+combinedSNPs["vgsc_3315983763"][combinedSNPs["vgsc_3315983763"] == "CT"] <- "2"
+combinedSNPs["vgsc_3315999297"][combinedSNPs["vgsc_3315999297"] == "GT"] <- "2"
+combinedSNPs["vgsc_3316014588"][combinedSNPs["vgsc_3316014588"] == "AT"] <- "2"
+combinedSNPs["vgsc_3316080722"][combinedSNPs["vgsc_3316080722"] == "CA"] <- "2"
+combinedSNPs["X1000854391"][combinedSNPs["X1000854391"] == "GC"] <- "2"
+combinedSNPs["X1016293828"][combinedSNPs["X1016293828"] == "TC"] <- "2"
+combinedSNPs["X1027746708"][combinedSNPs["X1027746708"] == "CT"] <- "2"
+combinedSNPs["X1070561909"][combinedSNPs["X1070561909"] == "AG"] <- "2"
+combinedSNPs["X1101943648"][combinedSNPs["X1101943648"] == "GT"] <- "2"
+combinedSNPs["X2001844389"][combinedSNPs["X2001844389"] == "TG"] <- "2"
+combinedSNPs["X2186624519"][combinedSNPs["X2186624519"] == "GA"] <- "2"
+combinedSNPs["X2400630292"][combinedSNPs["X2400630292"] == "AT"] <- "2"
+combinedSNPs["X2426833801"][combinedSNPs["X2426833801"] == "AG"] <- "2"
+combinedSNPs["X2429563021"][combinedSNPs["X2429563021"] == "GA"] <- "2"
+combinedSNPs["X2472373785"][combinedSNPs["X2472373785"] == "CT"] <- "2"
+combinedSNPs["X3000389496"][combinedSNPs["X3000389496"] == "TA"] <- "2"
+combinedSNPs["X3019326496"][combinedSNPs["X3019326496"] == "TC"] <- "2"
+combinedSNPs["X3068430261"][combinedSNPs["X3068430261"] == "GA"] <- "2"
+combinedSNPs["X3233038191"][combinedSNPs["X3233038191"] == "GA"] <- "2"
+combinedSNPs["X3233420299"][combinedSNPs["X3233420299"] == "AT"] <- "2"
+combinedSNPs["X3235265896"][combinedSNPs["X3235265896"] == "GA"] <- "2"
+combinedSNPs["X3305442338"][combinedSNPs["X3305442338"] == "AG"] <- "2"
+combinedSNPs["X3385240055"][combinedSNPs["X3385240055"] == "AG"] <- "2"
+combinedSNPs["vgsc_3315983611"][combinedSNPs["vgsc_3315983611"] == "CT"] <- "2"
+combinedSNPs["X1000854266"][combinedSNPs["X1000854266"] == "CT"] <- "2"
+combinedSNPs["X1055614166"][combinedSNPs["X1055614166"] == "CT"] <- "2"
+combinedSNPs["X1179585685"][combinedSNPs["X1179585685"] == "AG"] <- "2"
+combinedSNPs["X1224849446"][combinedSNPs["X1224849446"] == "AG"] <- "2"
+combinedSNPs["X2038960557"][combinedSNPs["X2038960557"] == "GA"] <- "2"
+combinedSNPs["X2107208294"][combinedSNPs["X2107208294"] == "GT"] <- "2"
+combinedSNPs["X2377059147"][combinedSNPs["X2377059147"] == "CA"] <- "2"
+combinedSNPs["X3052344181"][combinedSNPs["X3052344181"] == "CT"] <- "2"
+combinedSNPs["X3315939224"][combinedSNPs["X3315939224"] == "CA"] <- "2"
+combinedSNPs["vgsc_3315931548"][combinedSNPs["vgsc_3315931548"] == "AC"] <- "2"
+combinedSNPs["vgsc_3315931672"][combinedSNPs["vgsc_3315931672"] == "CT"] <- "2"
+combinedSNPs["vgsc_3315983763"][combinedSNPs["vgsc_3315983763"] == "TC"] <- "2"
+combinedSNPs["vgsc_3315999297"][combinedSNPs["vgsc_3315999297"] == "TG"] <- "2"
+combinedSNPs["vgsc_3316014588"][combinedSNPs["vgsc_3316014588"] == "TA"] <- "2"
+combinedSNPs["vgsc_3316080722"][combinedSNPs["vgsc_3316080722"] == "AC"] <- "2"
+combinedSNPs["X1000854391"][combinedSNPs["X1000854391"] == "CG"] <- "2"
+combinedSNPs["X1016293828"][combinedSNPs["X1016293828"] == "CT"] <- "2"
+combinedSNPs["X1027746708"][combinedSNPs["X1027746708"] == "TC"] <- "2"
+combinedSNPs["X1070561909"][combinedSNPs["X1070561909"] == "GA"] <- "2"
+combinedSNPs["X1101943648"][combinedSNPs["X1101943648"] == "TG"] <- "2"
+combinedSNPs["X2001844389"][combinedSNPs["X2001844389"] == "GT"] <- "2"
+combinedSNPs["X2186624519"][combinedSNPs["X2186624519"] == "AG"] <- "2"
+combinedSNPs["X2400630292"][combinedSNPs["X2400630292"] == "TA"] <- "2"
+combinedSNPs["X2426833801"][combinedSNPs["X2426833801"] == "GA"] <- "2"
+combinedSNPs["X2429563021"][combinedSNPs["X2429563021"] == "AG"] <- "2"
+combinedSNPs["X2472373785"][combinedSNPs["X2472373785"] == "TC"] <- "2"
+combinedSNPs["X3000389496"][combinedSNPs["X3000389496"] == "AT"] <- "2"
+combinedSNPs["X3019326496"][combinedSNPs["X3019326496"] == "CT"] <- "2"
+combinedSNPs["X3068430261"][combinedSNPs["X3068430261"] == "AG"] <- "2"
+combinedSNPs["X3233038191"][combinedSNPs["X3233038191"] == "AG"] <- "2"
+combinedSNPs["X3233420299"][combinedSNPs["X3233420299"] == "TA"] <- "2"
+combinedSNPs["X3235265896"][combinedSNPs["X3235265896"] == "AG"] <- "2"
+combinedSNPs["X3305442338"][combinedSNPs["X3305442338"] == "GA"] <- "2"
+combinedSNPs["X3385240055"][combinedSNPs["X3385240055"] == "GA"] <- "2"
+combinedSNPs["vgsc_3315983611"][combinedSNPs["vgsc_3315983611"] == "TC"] <- "2"
+
+#write.csv(combinedSNPs,file= "NumberCombinedLEEAttardoAug2021SNPs.csv")
+```
+
+```{r PCA Data Sheet prep}
+#How many columns? 42 
+ncol(SNPs)
+#Make sure there are NO NAs in the annotation columns! Or else they will be dropped
+SNPs_NA<-na.omit(SNPs)
+results <- prcomp(SNPs_NA[c(9:42)])
+summary(results)
+
+
+```
+
+```{r PCA and Scree Plot}
+screeplot(results, type = "l", npcs = 15, main = "Screeplot of the first 10 PCs")
+abline(h = 1, col="red", lty=5)
+legend("topright", legend=c("Eigenvalue = 1"),
+       col=c("red"), lty=5, cex=0.6)
+cumpro <- cumsum(results$sdev^2 / sum(results$sdev^2))
+plot(cumpro[0:15], xlab = "PC #", ylab = "Amount of explained variance", main = "Cumulative variance plot")
+abline(v = 6, col="blue", lty=5)
+abline(h = 0.88759, col="blue", lty=5)
+legend("topleft", legend=c("Cut-off @ PC6"),
+       col=c("blue"), lty=5, cex=0.6)
+
+
+plot(results$x[,1],results$x[,2], xlab="PC1 (25%)", ylab = "PC2 (7%)", main = "PC1 / PC2 - plot")
+
+
+library("factoextra")
+fviz_pca_ind(results, geom.ind = "point", pointshape = 21, 
+             pointsize = 2, 
+             fill.ind = SNPs_NA$Local, 
+             col.ind = "black", 
+             palette = "jco", 
+             addEllipses = TRUE,
+             label = "var",
+             col.var = "black",
+             repel = TRUE,
+             legend.title = "Population") +
+  ggtitle("2D PCA-plot") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r Plotly PCAs}
+#try to make a plot in plotly 
+explained_variance_ratio <- summary(results)[["importance"]]['Proportion of Variance',]
+explained_variance_ratio <- 100 * explained_variance_ratio
+components <- results[["x"]]
+components <- data.frame(components)
+components <- cbind(components, SNPs_NA$Population )
+components$PC3 <- -components$PC3
+components$PC2 <- -components$PC2
+tot_explained_variance_ratio <- summary(results)[["importance"]]['Proportion of Variance',]
+tot_explained_variance_ratio <- 100 * sum(tot_explained_variance_ratio)
+tit = 'Total Explained Variance = 39.61'
+
+fig3D <- plot_ly(components, x = ~PC1, y = ~PC2, z = ~PC3, color = ~SNPs_NA$Local ) %>%
+  add_markers(size = 12)
+
+fig <- components %>%
+  plot_ly()  %>%
+  add_trace(
+    type = 'splom',
+    dimensions = list(
+      list(label=paste('PC 1 (',toString(round(explained_variance_ratio[1],1)),'%)',sep = ''), values=~PC1),
+      list(label=paste('PC 2 (',toString(round(explained_variance_ratio[2],1)),'%)',sep = ''), values=~PC2),
+      list(label=paste('PC 3 (',toString(round(explained_variance_ratio[3],1)),'%)',sep = ''), values=~PC3),
+      list(label=paste('PC 4 (',toString(round(explained_variance_ratio[4],1)),'%)',sep = ''), values=~PC4)
+    ),
+    color = ~SNPs_NA$Local, colors = c('#636EFA','#EF553B')
+  ) %>%
+  style(diagonal = list(visible = FALSE)) %>%
+  layout(
+    legend=list(title=list(text='color')),
+    hovermode='closest',
+    dragmode= 'select',
+    plot_bgcolor='rgba(240,240,240, 0.95)',
+    xaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+    yaxis=list(domain=NULL, showline=F, zeroline=F, gridcolor='#ffff', ticklen=4),
+    xaxis2=axis,
+    xaxis3=axis,
+    xaxis4=axis,
+    yaxis2=axis,
+    yaxis3=axis,
+    yaxis4=axis )
+
+fig
+fig3D
+
+```
+
+```{r Subsets Pops for PCAs}
+subset1 <- filter(SNPs, Population %in% c("Sanger", "Clovis", "Dinuba", "Greater LA", "Exe_2014"))
+
+subset1A_NA<-na.omit(subset1)
+
+subset1_NA <- subset1A_NA %>%
+  mutate( level = case_when(
+      KD.Time > 90  ~ "high",
+      between(subset1A_NA$KD.Time, 60, 90)  ~ "med",
+      KD.Time < 60  ~ "low",
+    )
+  )
+
+
+sub1results <- prcomp(subset1_NA[c(6:39)])
+summary(sub1results)
+
+screeplot(sub1results, type = "l", npcs = 15, main = "Screeplot of the first 10 PCs")
+abline(h = 1, col="red", lty=5)
+legend("topright", legend=c("Eigenvalue = 1"),
+       col=c("red"), lty=5, cex=0.6)
+cumpro <- cumsum(sub1results$sdev^2 / sum(sub1results$sdev^2))
+plot(cumpro[0:15], xlab = "PC #", ylab = "Amount of explained variance", main = "Cumulative variance plot")
+abline(v = 6, col="blue", lty=5)
+abline(h = 0.88759, col="blue", lty=5)
+legend("topleft", legend=c("Cut-off @ PC6"),
+       col=c("blue"), lty=5, cex=0.6)
+
+
+plot(sub1results$x[,1],sub1results$x[,2], xlab="PC1 (44.3%)", ylab = "PC2 (19%)", main = "PC1 / PC2 - plot")
+
+
+library("factoextra")
+fviz_pca_ind(sub1results, geom.ind = "point", pointshape = 21,
+             pointsize = 1, 
+             fill.ind = subset1_NA$Group, 
+             addEllipses = TRUE,
+             col.ind = subset1_NA$Group,
+             palette = c("gold", "darkorange", "blue","pink1", "green4"),
+             label = "var",
+             col.var = subset1_NA$Group,
+             repel = TRUE,
+             legend.title = "Population")
+  
+  
+
+fviz_pca_var(sub1results)
+
+subset2 <- filter(SNPs, Population %in% c("Sanger", "Clovis", "Dinuba", "Greater LA"))
+
+subset2_NA<-na.omit(subset2)
+
+
+
+sub2results <- prcomp(subset2_NA[c(6:39)])
+summary(sub2results)
+
+screeplot(sub2results, type = "l", npcs = 15, main = "Screeplot of the first 10 PCs")
+abline(h = 1, col="red", lty=5)
+legend("topright", legend=c("Eigenvalue = 1"),
+       col=c("red"), lty=5, cex=0.6)
+cumpro <- cumsum(sub2results$sdev^2 / sum(sub2results$sdev^2))
+plot(cumpro[0:15], xlab = "PC #", ylab = "Amount of explained variance", main = "Cumulative variance plot")
+abline(v = 6, col="blue", lty=5)
+abline(h = 0.88759, col="blue", lty=5)
+legend("topleft", legend=c("Cut-off @ PC6"),
+       col=c("blue"), lty=5, cex=0.6)
+
+
+plot(sub2results$x[,1],sub2results$x[,2], xlab="PC1 (44.3%)", ylab = "PC2 (19%)", main = "PC1 / PC2 - plot")
+
+
+library("factoextra")
+fviz_pca_ind(sub2results, geom.ind = "point", pointshape = 21,
+             pointsize = 1, 
+             fill.ind = subset2_NA$Group, 
+             addEllipses = TRUE,
+             col.ind = subset2_NA$Group,
+             palette = c("gold", "darkorange"),
+             label = "var",
+             col.var = subset2_NA$Group,
+             repel = TRUE,
+             legend.title = "Population")
+fviz_pca_var(sub2results)
+```
+
+```{r stacked bar chart in R of the Allele frequencies}
+#stacked bar chart in R of the Allele frequencies 
+df <- data.frame((group=c('LA','LA', 'Central Valley', 'Central Valley')), allele = c('S', 'R','S', 'R'), percent = c(30,70,1.2,98.8 ))
+
+ggplot(df, aes(fill = allele, y= percent, x= df$X.group...c..LA....LA....Central.Valley....Central.Valley...))+
+  geom_bar(position = 'stack', stat='identity')+
+  theme_classic()
+```
+
+```{r}
+library(strataG)
+
+clumpp(
+  sr,
+  k,
+  align.algorithm = "greedy",
+  sim.stat = "g",
+  greedy.option = "ran.order",
+  repeats = 100,
+  order.by.run = 0,
+  label = NULL,
+  delete.files = TRUE
+)
+
+```
+
+
+
+
