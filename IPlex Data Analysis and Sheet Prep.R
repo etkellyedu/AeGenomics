@@ -49,6 +49,39 @@ for (file in files) {
 }
 
 
+
+#1.A Check if we can bind the csvs together ####
+library(tidyverse)
+
+# Set the directory where your CSV files are located
+csv_dir <- "Data/GenotypeCSV/"
+
+# Get a list of all CSV files in the directory
+csv_files <- list.files(path = csv_dir, pattern = "*.csv", full.names = TRUE)
+
+# Create an empty data frame to store the results
+results_df <- data.frame(filename = character(), num_rows = numeric(), num_cols = numeric())
+
+# Loop through each CSV file and add its filename, number of rows, and number of columns to the results data frame
+for (csv_file in csv_files) {
+  # Read in the CSV file
+  csv_data <- read_csv(csv_file)
+  
+  # Get the number of rows and columns in the CSV file
+  num_rows <- nrow(csv_data)
+  num_cols <- ncol(csv_data)
+  
+  # Create a row for the results data frame with the filename, number of rows, and number of columns
+  results_row <- data.frame(filename = csv_file, num_rows = num_rows, num_cols = num_cols)
+  
+  # Add the results row to the results data frame
+  results_df <- bind_rows(results_df, results_row)
+}
+
+# Print the results data frame
+print(results_df)
+
+
 # STEP 2: Make genotype data file by combining all genotype CSVs ####
 # specify the directory path
 # old drive directory_path <- "Google Drive/Shared drives/Attardo Lab/Projects/Insecticide Resistance in Aedes aegypti/Data/iPlex Results /Iplex Genotype CSV/"
@@ -88,8 +121,12 @@ merged_data <- merge(combined_data1,combined_data2, by = "SAMPLE_NAME")
 
 #drop well column
 merged_data <- merged_data[, -c(2,3,26,27)]
+
 #some Ts get turned to TRUE (logical), change all to character
 merged_data[merged_data == "TRUE"] <- "T"
+
+#replace blanks with NA
+df <- df %>% mutate_all(na_if,"")
 
 #troubleshooting: IGNORE
 mastersheet <- read_excel("/Users/Taylor1/Downloads/Master Data Sheet AEG+OC.xlsx")
@@ -310,6 +347,7 @@ SNPcode <- read_sheet("https://docs.google.com/spreadsheets/d/15kRDVvlwXJhp4x39Y
 
 SNPcode <- read_excel("/Users/Taylor1/Downloads/Copy of Aaeg-pop-SNPs_iPLEX_KDT_Positions.xlsx")
 
+
 #for loop 
 for (i in 1:nrow(SNPcode)){
   
@@ -333,6 +371,54 @@ for (i in 1:nrow(SNPcode)){
 #STEP 5: Allele Frequency Tables ####
 # data is wide, make it long 
 long_allele <- pivot_longer(merged_data, cols = -1, names_to = "SNP", values_to = "Genotype")
+
+#calculate SNP Call Rate Per Sample
+Sample_CallRate <- long_allele %>% 
+  group_by(SAMPLE_NAME) %>%
+  summarize(n_NA = sum(is.na(Genotype))) %>% 
+  mutate(Call = (1-(n_NA/42))*100) 
+
+#get sample N
+TotalSample <- unique(long_allele$SAMPLE_NAME)  %>% 
+  length()
+
+#calculate Call Rate Per SNP
+SNP_CallRate <- long_allele %>% 
+  group_by(SNP) %>%
+  summarize(n_NA = sum(is.na(Genotype))) %>% 
+  mutate(Call = (1-(n_NA/446))*100) 
+
+# lookup table questions
+#check its a data frame
+class(merged_data)
+
+#cols have names, need this 
+# base r way and dplyr way to do it
+
+SNP_CallRate %>% 
+  filter(Call > 90) %>%
+  select(SNP)
+#need a vector
+#Select cols
+SNindex <- SNP_CallRate$SNP[SNP_CallRate$Call>90]
+filteredcol <- select(merged_data, SAMPLE_NAME, all_of(SNindex))
+
+#filter rows
+SAMindex <- Sample_CallRate$SAMPLE_NAME[SNP_CallRate$Call>70]
+#filtering rows here, not searching by name. Instead search by some logical test, like is it within samindex
+filteredSAM <- filter(filteredcol, SAMPLE_NAME %in% SAMindex)
+
+
+
+VGSC_SNPs <- c('vgsc_3:315931548','vgsc_3315931672', 'vgsc_3315983611',
+         'vgsc_3315983763','vgsc_3315999297' ,'vgsc_3316014588',
+         'vgsc_3316080722','X3315939224')
+
+VGSC_table <- long_allele %>% 
+  filter(SNP %in% VGSC_SNPs) %>% 
+  count(Genotype, SNP)
+
+
 
 
 
