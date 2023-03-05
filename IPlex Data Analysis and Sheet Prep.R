@@ -50,7 +50,7 @@ for (file in files) {
 
 
 
-#1.A Check if we can bind the csvs together ####
+#1A: Check if we can bind the csvs together ####
 library(tidyverse)
 
 # Set the directory where your CSV files are located
@@ -88,6 +88,9 @@ print(results_df)
 directory_path <- "Data/GenotypeCSV/"
 
 #Note: our test has two plates. Create master sheets for each plate, then merge at the end
+
+#Note::: We delete the 2018 run of Dinuba samples because we updated the SNPs to include 1534. 
+#However, the rerun was missing the 1534 primers, so we had to rerun those samples (DSY) for a single SNP. That data sheet was fixed manually. 
 # create an empty dataframe to store the combined data for W2
 combined_data2 <- data.frame()
 
@@ -117,7 +120,7 @@ for (file_name in list.files(directory_path)) {
 #merge W1 and W2
 merged_data <- merge(combined_data1,combined_data2, by = "SAMPLE_NAME")
 
-# STEP 2A: Cleanup ####
+# 2A: Cleanup ####
 
 #drop well column
 merged_data <- merged_data[, -c(2,3,26,27)]
@@ -126,22 +129,8 @@ merged_data <- merged_data[, -c(2,3,26,27)]
 merged_data[merged_data == "TRUE"] <- "T"
 
 #replace blanks with NA
-df <- df %>% mutate_all(na_if,"")
+merged_data <- merged_data %>% mutate_all(na_if,"")
 
-#troubleshooting: IGNORE
-mastersheet <- read_excel("/Users/Taylor1/Downloads/Master Data Sheet AEG+OC.xlsx")
-colnames(mastersheet)[3] <- 'SAMPLE_NAME'
-df1 <- select(mastersheet, 2,3)
-df2 <- merged_data
-
-# Join the two datasets on the matching column, "SAMPLE_NAME"
-merged_df <- merge(df1, df2, by = "SAMPLE_NAME", all.x = TRUE)
-
-# Find the rows with no match in dataset 1
-no_match_df1 <- df1[!(df1$SAMPLE_NAME %in% merged_df$SAMPLE_NAME), ]
-
-# Find the rows with no match in dataset 2
-no_match_df2 <- df2[!(df2$SAMPLE_NAME %in% merged_df$SAMPLE_NAME), ]
 
 # STEP 3: PCA Sheet Prep ####
 combinedSNPs[combinedSNPs == "TRUE"] <- "T"
@@ -287,7 +276,6 @@ combinedSNPs["X3385240055"][combinedSNPs["X3385240055"] == "GA"] <- "2"
 combinedSNPs["vgsc_3315983611"][combinedSNPs["vgsc_3315983611"] == "TC"] <- "2"
 
 
-
 # STEP 4: Structure Sheet Prep ####
 # Use `str_length` from `stringr` to determine the number of characters in each cell
 # If the number of characters is 2, keep only the first character
@@ -368,7 +356,8 @@ for (i in 1:nrow(SNPcode)){
 }
 
 
-#STEP 5: Allele Frequency Tables ####
+#STEP 5: Call Rate Evaluation ####
+
 # data is wide, make it long 
 long_allele <- pivot_longer(merged_data, cols = -1, names_to = "SNP", values_to = "Genotype")
 
@@ -386,7 +375,7 @@ TotalSample <- unique(long_allele$SAMPLE_NAME)  %>%
 SNP_CallRate <- long_allele %>% 
   group_by(SNP) %>%
   summarize(n_NA = sum(is.na(Genotype))) %>% 
-  mutate(Call = (1-(n_NA/446))*100) 
+  mutate(Call = (1-(n_NA/674))*100) 
 
 # lookup table questions
 #check its a data frame
@@ -408,17 +397,37 @@ SAMindex <- Sample_CallRate$SAMPLE_NAME[SNP_CallRate$Call>70]
 #filtering rows here, not searching by name. Instead search by some logical test, like is it within samindex
 filteredSAM <- filter(filteredcol, SAMPLE_NAME %in% SAMindex)
 
+# STEP 6: Allele Frequency Tables ####
 
+#read in recoding sheet 
+SNPcode <- read.csv("Data/VGSCSNPCode.csv") %>% 
+  select(1,6:9,13) %>% 
+  pivot_longer(cols = 2:5, 
+               names_to = "Phenotype", 
+               values_to = "Genotype")
 
-VGSC_SNPs <- c('vgsc_3:315931548','vgsc_3315931672', 'vgsc_3315983611',
+#Make VGSC SNPs list for search
+VGSC_SNPs <- c('vgsc_3315931548','vgsc_3315931672', 'vgsc_3315983611',
          'vgsc_3315983763','vgsc_3315999297' ,'vgsc_3316014588',
          'vgsc_3316080722','X3315939224')
 
-VGSC_table <- long_allele %>% 
-  filter(SNP %in% VGSC_SNPs) %>% 
-  count(Genotype, SNP)
+#filter by VGSC list
+Allele_VGSC <- long_allele %>% 
+  filter(SNP %in% VGSC_SNPs) %>%
+  count(Genotype, SNP) 
+
+# Replace NAs with No Call
+Allele_VGSC$Genotype  <- replace_na(Allele_VGSC$Genotype, "No Call")
+
+#Merge VGSC Key and filtered IPlex Data 
+VGSC_table <- merge(Allele_VGSC, SNPcode)
 
 
+#Pivot Wider
+VGSCWide <- VGSC_table %>% select(3:5) %>%
+  pivot_wider(names_from = Musca,
+                           values_from= n)
+  
 
 
 
